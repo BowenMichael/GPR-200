@@ -1,7 +1,4 @@
 // GLSL STARTER CODE BY DANIEL S. BUCKSTEIN
-float globalIntensity = .1;
-vec4 globalColor = vec4(1.0);
-const int MAX_LIGHTS = 5;
 
 //------------------------------------------------------------
 // TYPE ALIASES & UTILITY FUNCTIONS
@@ -33,16 +30,6 @@ const int MAX_LIGHTS = 5;
 // 	(this is non-spatial so neither a point nor vector)
 #define color4 vec4
 
-float squareValue(in float x){
-	return x*x;
-}
-
-float powerOfTwo (in float base, in int power){
-    for(int i = power - 1; i >= 0; --i){
-    	base *= base;
-    }
-	return base;
-}
 
 // asPoint: promote a 3D vector into a 4D vector 
 //	representing a point in space (w=1)
@@ -138,21 +125,6 @@ void initViewport(out sViewport vp,
     vp.viewportPoint = asPoint(sBasis(vp.ndc * vp.size * 0.5, -vp.focalLength));
 }
 
-struct pLight
-{
-	vec4 center;
-    vec4 color;
-    float intensity;
-};
-
-void initPointLight(out pLight light, in vec3 center, in vec4 color, in float intensity)
-{
-  	light.center = asPoint(center);
-    light.color = color;
-    light.intensity = intensity;
-    
-}
-
 
 //------------------------------------------------------------
 // RAY INFO
@@ -193,10 +165,6 @@ void initRayOrtho(out sRay ray,
     initRayPersp(ray, eyePosition + sBasis(viewport.xy, 0.0), viewport);
 }
 
-void distort(out vec2 px){
-    float modifier = 50.0;
-	px = vec2(px.x, px.y + cos((px.x + iTime/(modifier/2.0)) * modifier)/modifier);
-}
 
 //------------------------------------------------------------
 // RENDERING FUNCTIONS
@@ -206,65 +174,12 @@ void distort(out vec2 px){
 //	  ray: input ray info
 color4 calcColor(in sViewport vp, in sRay ray)
 {
-    //texture init
-    vec2 modifier = vec2(cos(iTime), sin(iTime));
-    vec2 px = vp.pixelCoord;
-    vec2 res = iChannelResolution[0].xy;
-    sDCoord loc = px / res;
-    loc *= 1.0;
-    distort(loc);
-    vec4 t1 = texture(iChannel0, loc);
-    
-    //Lights init
-    pLight lights[MAX_LIGHTS];
-    //initPointLight(lights[0], vec3(1.0, 1.0, 2.0), vec4(1.0), 10.0);
-    initPointLight(lights[1], vec3(iMouse.x,  iMouse.y, 0.0), vec4(1.0), 10.0);
-    
-    //surface init
-    vec3 sufacePos = vec3(px, -1.0);
-    vec3 sufaceNorm = vec3(0.0, 0.0, 1.0);
-    
-    //light color init
-    vec4 diffuseColor = vec4(sufaceNorm * 0.5 + 0.5, 1.0);
-    vec4 specularColor = vec4(1.0);
-    
-    vec4 finalColor;
-    for(int i = MAX_LIGHTS-1; i >= 0; --i)
-    {
-        //Diffuse Intensity
-        vec3 lightVector = lights[i].center.xyz - sufacePos;
-        float lightVectorLengthSq = lengthSq(lightVector); //saves a square root function
-        vec3 normalizedLightVector = lightVector * inversesqrt(lightVectorLengthSq); // multiply by the inverse is more efficent
-
-        float diffusionCoefficent = max(0.0, (dot(sufaceNorm, normalizedLightVector)));
-        float attenuation = (1.0 - lightVectorLengthSq/squareValue(lights[i].intensity));
-        float diffuseIntensity = diffusionCoefficent * attenuation; 
-
-        //Blinn-Phong Reflectance
-        vec3 viewVector = ray.origin.xyz - sufacePos; //Created because viewVector is used twice
-        vec3 normalViewVector = viewVector * inversesqrt(lengthSq(viewVector)); //Multiplied by the inverse and uses the dquared length function
-        vec3 halfWayVector = normalizedLightVector + normalViewVector; //Used twice 
-        vec3 normalHalfWayVector = halfWayVector * inversesqrt(lengthSq(halfWayVector));
-        float specCoefficent = max(0.0, dot(sufaceNorm, normalHalfWayVector)); //Multiplied by the inverse and uses the dquared length function
-        float specularIntensity = powerOfTwo(specCoefficent, 50); //improved eff by removing pow function and adding a power of two function
-
-        finalColor += (diffuseIntensity * diffuseColor + specularIntensity * specularColor) * lights[i].color;
-    }
-    //Final Color calculation
-    vec4 sumOfColors = globalIntensity * globalColor + finalColor;
-    
-    return t1 + sumOfColors;
-    
-    
-    //vec4 t2 = texture(iChannel1, vp.uv );
-    //return vec4(mix(t1.rgb,t2.rgb, .5), 1.0);
-    
     // test inputs
     //return color4(ray.direction.xyz == vp.viewportPoint.xyz); // pass
-    return color4(lengthSq(vp.viewportPoint.xy) >= 0.25); // pass
+    //return color4(lengthSq(vp.viewportPoint.xy) >= 0.25); // pass
     //return color4(vp.uv, 0.0, 0.0);
     //return color4(vp.ndc, 0.0, 0.0);
-    //return vp.viewportPoint;
+    return vp.viewportPoint;
 }
 
 
