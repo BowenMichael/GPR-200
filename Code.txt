@@ -2,6 +2,8 @@
 float globalIntensity = .1;
 vec4 globalColor = vec4(1.0);
 const int MAX_LIGHTS = 5;
+#define PI 3.1415926538
+
 
 //------------------------------------------------------------
 // TYPE ALIASES & UTILITY FUNCTIONS
@@ -73,6 +75,29 @@ sScalar lengthSq(sBasis x)
 sScalar lengthSq(sVector x)
 {
     return dot(x, x);
+}
+
+//Rotation Functions
+//mat3(1.0,0.0,0.0,0.0,c,s,0.0,-s,c); //Rotates around the X axis
+//mat3(c,0.0,-s,0.0		  ,1.0,0.0,s,0.0,c); //rotates around the y axis
+//mat3(c  ,s  ,0.0,-s ,c  ,0.0,0.0,0.0,1.0); //rotates around the z axis
+mat3 rotXAxis3D(in float theta){
+    float c = cos(theta);
+    float s = sin(theta);
+    return mat3(1.0,0.0,0.0,0.0,c,s,0.0,-s,c); //Rotates around the X axis
+}
+
+mat3 rotYAxis3D(in float theta){
+    float c = cos(theta);
+    float s = sin(theta);
+    return mat3(c,0.0,-s,0.0		  ,1.0,0.0,s,0.0,c); //rotates around the y axis
+}
+
+
+vec4 texture2Dinit(in vec2 px, in vec2 invRes){
+    vec2 loc = px * invRes;
+    loc *= 1.0;
+    return texture(iChannel0, loc);
 }
 
 
@@ -153,6 +178,18 @@ void initPointLight(out pLight light, in vec3 center, in vec4 color, in float in
     
 }
 
+struct sSphere
+{
+	float radius;
+    vec4 center;
+};
+
+void initSphere (out sSphere sphere, in vec3 center, in float radius) 
+{
+	sphere.center = asPoint(center);
+    sphere.radius = radius;
+
+}
 
 //------------------------------------------------------------
 // RAY INFO
@@ -193,16 +230,40 @@ void initRayOrtho(out sRay ray,
     initRayPersp(ray, eyePosition + sBasis(viewport.xy, 0.0), viewport);
 }
 
-void distort(out vec2 px){
+vec2 distort(in vec2 px){
     float modifier = 50.0;
-	px = vec2(px.x, px.y + cos((px.x + iTime/(modifier/2.0)) * modifier)/modifier);
+	return vec2(px.x, px.y + cos((px.x + iTime/(modifier/2.0)) * modifier)/modifier);
 }
+
+vec3 distort(in vec3 px){
+    float modifier = 50.0;
+	return vec3(px.x, px.y + cos((px.x + iTime/(modifier/2.0)) * modifier)/modifier, px.z);
+}
+
+vec4 texture2DinitDistort(in vec2 px, in vec2 invRes){
+    vec2 loc = px * invRes;
+    loc *= 1.0;
+    loc = distort(loc);
+    return texture(iChannel0, loc);
+}
+
+bool circleExists(sRay ray, sSphere sphere, inout vec3 dp) {
+    dp.xy = ray.direction.xy - sphere.center.xy; //ray from pixel toward the center of the circle
+    float lSq = lengthSq(dp.xy), //the length function calulates the square length so it is more efficent just square it
+          rSq = squareValue(sphere.radius);
+    if(lSq <= rSq){
+        return true;
+    }
+    return false;
+}
+
+
 
 float calcDiffuseIntensity(in vec3 surfacePos, in vec3 surfaceNorm, in pLight light, inout vec3 normalizedLightVector){
         //Diffuse Intensity
         vec3 lightVector = light.center.xyz - surfacePos;
         float lightVectorLengthSq = lengthSq(lightVector); //saves a square root function
-        normalizedLightVector = lightVector * inversesqrt(lightVectorLengthSq); // multiply by the inverse is more efficent
+        normalizedLightVector = lightVector * inversesqrt(lightVectorLengthSq); //declaration of var
         float diffusionCoefficent = max(0.0, (dot(surfaceNorm, normalizedLightVector)));
         float attenuation = (1.0 - lightVectorLengthSq/squareValue(light.intensity));
         return diffusionCoefficent * attenuation; 
@@ -227,47 +288,84 @@ float calcSpecularIntensity(in vec3 surfacePos, in vec3 surfaceNorm, in sRay ray
 color4 calcColor(in sViewport vp, in sRay ray)
 {
     //texture init
-    //vec2 modifier = vec2(cos(iTime), sin(iTime));
-    vec2 px = vp.pixelCoord;
-    vec2 res = iChannelResolution[0].xy;
-    sDCoord loc = px / res;
-    loc *= 1.0;
-    distort(loc);
-    vec4 t1 = texture(iChannel0, loc);
+	//vec4 t1 = texture2Dinit(vp.pixelCoord, vp.resolutionInv);
+    vec4 t1 = texture2DinitDistort(vp.pixelCoord, vp.resolutionInv);
+    vec4 t2 = texture2DinitDistort(vp.pixelCoord, vp.resolutionInv);
+      
+    //CubeMap
+    vec3 rayVec = ray.direction.xyz;
     
-    vec3 animate = vec3(1.0, 1.0, 1.0);
-    //vec3 rayVec = ray.direction.xyz+animate;
-    vec3 rayVec = vp.viewportPoint.xyz + animate;
-    //rayVec = normalize(rayVec);
-	vec4 cubeMap = texture(iChannel2, normalize(rayVec)); //it apears like the vector is only looking at one of the walls of the cube map????
+    //rotation based on mouse position
+	vec2 theta = (iMouse.xy* vp.resolutionInv)*4.0; //Makes the mouse position more proportinal to the output screen 
+    theta.y += PI * .25;//allows for a better viewing experiance of the scene
+    theta *= 2.0; //allows for a better viewing experiance of the scene
+    rayVec *= rotXAxis3D(-theta.y) * rotYAxis3D(theta.x); //rotates the scene to an angle based on the mouse position
+    //distort(rayVec);//Distort for fun
+    
+    //Render Cube color
+	vec4 cube = texture(iChannel2, rayVec);
+    
+    sSphere sphere;
+    //initSphere(sphere, vec3(sin(iTime), 0.0, -4.0), .5);
+    initSphere(sphere, vec3(0.0, 0.0, -4.0), .5);
     
     //Lights init
     pLight lights[MAX_LIGHTS];
-    initPointLight(lights[0], vec3(vp.resolution.x/2.0, vp.resolution.y/2.0, 0.0), vec4(1.0), 100.0);
-    //initPointLight(lights[1], vec3(iMouse.x,  iMouse.y, 0.0), vec4(1.0), 10.0);
+    //initPointLight(lights[0], vec3(vp.resolution.x/2.0, vp.resolution.y/2.0, 0.0), vec4(1.0), 10.0);
+    initPointLight(lights[1], vec3(iMouse.x,  iMouse.y, 0.0), vec4(1.0), 15.0);
+    //initPointLight(lights[2], vec3(cos(iTime), sin(iTime), 0.0), vec4(1.0), 100.0);
+    //initPointLight(lights[3], vec3(2.0,  2.0, 0.0), vec4(1.0), 10.0);
     
     //surface init
-    vec3 surfacePos = vec3(px, -1.0);
-    vec3 surfaceNorm = vec3(0.0, 0.0, 1.0);
+    vec3 position = vec3(vp.pixelCoord, -1.0); //surface position
+    vec3 normal = vec3(0.0, 0.0, 1.0); //surface Normal
+    //vec3 surfaceNorm = normalize(vec3(vp.viewportPoint.xy, 1.0));
+    
+    //return vec4(surfaceNorm, 1.0); //test output
+   
+
+    /*if(circleExists(ray, sphere, position)){
+        position.z = squareValue(sphere.radius) - ((position.x*position.x)+(position.y*position.y));
+        position = sphere.center.xyz + vec3(position.x, position.y, sqrt(position.z));
+        normal = (position - sphere.center.xyz) / sphere.radius;
+        
+    	//light color init
+        vec4 diffuseColor = vec4(normal * 0.5 + 0.5, 1.0);;
+        vec4 specularColor = vec4(1.0);
+
+        vec4 backroundColor;
+        for(int i = MAX_LIGHTS-1; i >= 0; --i)
+        {
+
+            vec3 normalizedLightVector;
+            backroundColor += (calcDiffuseIntensity(position, normal, lights[i], normalizedLightVector) * diffuseColor 
+                           + calcSpecularIntensity(position, normal, ray, normalizedLightVector) * specularColor) * lights[i].color;
+        }
+        //Final Color calculation
+        return globalIntensity * globalColor + backroundColor;
+    }*/
     
     //light color init
-    vec4 diffuseColor = vec4(1.0);
+    vec4 diffuseColor = vec4(normal * 0.5 + 0.5, 1.0);;
     vec4 specularColor = vec4(1.0);
     
-    vec4 finalColor;
+    vec4 backroundColor;
     for(int i = MAX_LIGHTS-1; i >= 0; --i)
     {
+        
 		vec3 normalizedLightVector;
-        finalColor += (calcDiffuseIntensity(surfacePos, surfaceNorm, lights[i], normalizedLightVector) * diffuseColor 
-                       + calcSpecularIntensity(surfacePos, surfaceNorm, ray, normalizedLightVector) * specularColor) * lights[i].color;
+        backroundColor += (calcDiffuseIntensity(position, normal, lights[i], normalizedLightVector) * diffuseColor 
+                       + calcSpecularIntensity(position, normal, ray, normalizedLightVector) * specularColor) * lights[i].color;
     }
     //Final Color calculation
-    vec4 sumOfColors = globalIntensity * globalColor + finalColor;
+    vec4 sumOfColors = globalIntensity * globalColor + backroundColor;
+    //return vec4(.5);
     
-    return cubeMap;
-    
+    //rendering for part 3
     //return t1 + sumOfColors;
-    return cubeMap + sumOfColors;
+    
+    //Rendering for part 4
+    return cube + sumOfColors;
     
     //vec4 t2 = texture(iChannel1, vp.uv );
     //return vec4(mix(t1.rgb,t2.rgb, .5), 1.0);
