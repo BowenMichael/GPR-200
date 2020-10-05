@@ -198,6 +198,26 @@ void distort(out vec2 px){
 	px = vec2(px.x, px.y + cos((px.x + iTime/(modifier/2.0)) * modifier)/modifier);
 }
 
+float calcDiffuseIntensity(in vec3 surfacePos, in vec3 surfaceNorm, in pLight light, inout vec3 normalizedLightVector){
+        //Diffuse Intensity
+        vec3 lightVector = light.center.xyz - surfacePos;
+        float lightVectorLengthSq = lengthSq(lightVector); //saves a square root function
+        normalizedLightVector = lightVector * inversesqrt(lightVectorLengthSq); // multiply by the inverse is more efficent
+        float diffusionCoefficent = max(0.0, (dot(surfaceNorm, normalizedLightVector)));
+        float attenuation = (1.0 - lightVectorLengthSq/squareValue(light.intensity));
+        return diffusionCoefficent * attenuation; 
+}
+
+float calcSpecularIntensity(in vec3 surfacePos, in vec3 surfaceNorm, in sRay ray, in vec3 normalizedLightVector ){
+		//Blinn-Phong Reflectance
+        vec3 viewVector = ray.origin.xyz - surfacePos; //Created because viewVector is used twice
+        vec3 normalViewVector = viewVector * inversesqrt(lengthSq(viewVector)); //Multiplied by the inverse and uses the dquared length function
+        vec3 halfWayVector = normalizedLightVector + normalViewVector; //Used twice 
+        vec3 normalHalfWayVector = halfWayVector * inversesqrt(lengthSq(halfWayVector));
+        float specCoefficent = max(0.0, dot(surfaceNorm, normalHalfWayVector)); //Multiplied by the inverse and uses the dquared length function
+        return powerOfTwo(specCoefficent,50); //improved eff by removing pow function and adding a power of two function
+}
+
 //------------------------------------------------------------
 // RENDERING FUNCTIONS
 
@@ -207,7 +227,7 @@ void distort(out vec2 px){
 color4 calcColor(in sViewport vp, in sRay ray)
 {
     //texture init
-    vec2 modifier = vec2(cos(iTime), sin(iTime));
+    //vec2 modifier = vec2(cos(iTime), sin(iTime));
     vec2 px = vp.pixelCoord;
     vec2 res = iChannelResolution[0].xy;
     sDCoord loc = px / res;
@@ -215,46 +235,35 @@ color4 calcColor(in sViewport vp, in sRay ray)
     distort(loc);
     vec4 t1 = texture(iChannel0, loc);
     
+    vec3 animate = vec3(sin(iTime), 0.0, cos(iTime));
+    vec3 rayVec = ray.direction.xyz+animate;
+	vec4 cubeMap = texture(iChannel2, rayVec);
+    
     //Lights init
     pLight lights[MAX_LIGHTS];
-    //initPointLight(lights[0], vec3(1.0, 1.0, 2.0), vec4(1.0), 10.0);
-    initPointLight(lights[1], vec3(iMouse.x,  iMouse.y, 0.0), vec4(1.0), 10.0);
+    initPointLight(lights[0], vec3(vp.resolution.x/2.0, vp.resolution.y/2.0, 0.0), vec4(1.0), 100.0);
+    //initPointLight(lights[1], vec3(iMouse.x,  iMouse.y, 0.0), vec4(1.0), 10.0);
     
     //surface init
-    vec3 sufacePos = vec3(px, -1.0);
-    vec3 sufaceNorm = vec3(0.0, 0.0, 1.0);
+    vec3 surfacePos = vec3(px, -1.0);
+    vec3 surfaceNorm = vec3(0.0, 0.0, 1.0);
     
     //light color init
-    vec4 diffuseColor = vec4(sufaceNorm * 0.5 + 0.5, 1.0);
+    vec4 diffuseColor = vec4(1.0);
     vec4 specularColor = vec4(1.0);
     
     vec4 finalColor;
     for(int i = MAX_LIGHTS-1; i >= 0; --i)
     {
-        //Diffuse Intensity
-        vec3 lightVector = lights[i].center.xyz - sufacePos;
-        float lightVectorLengthSq = lengthSq(lightVector); //saves a square root function
-        vec3 normalizedLightVector = lightVector * inversesqrt(lightVectorLengthSq); // multiply by the inverse is more efficent
-
-        float diffusionCoefficent = max(0.0, (dot(sufaceNorm, normalizedLightVector)));
-        float attenuation = (1.0 - lightVectorLengthSq/squareValue(lights[i].intensity));
-        float diffuseIntensity = diffusionCoefficent * attenuation; 
-
-        //Blinn-Phong Reflectance
-        vec3 viewVector = ray.origin.xyz - sufacePos; //Created because viewVector is used twice
-        vec3 normalViewVector = viewVector * inversesqrt(lengthSq(viewVector)); //Multiplied by the inverse and uses the dquared length function
-        vec3 halfWayVector = normalizedLightVector + normalViewVector; //Used twice 
-        vec3 normalHalfWayVector = halfWayVector * inversesqrt(lengthSq(halfWayVector));
-        float specCoefficent = max(0.0, dot(sufaceNorm, normalHalfWayVector)); //Multiplied by the inverse and uses the dquared length function
-        float specularIntensity = powerOfTwo(specCoefficent, 50); //improved eff by removing pow function and adding a power of two function
-
-        finalColor += (diffuseIntensity * diffuseColor + specularIntensity * specularColor) * lights[i].color;
+		vec3 normalizedLightVector;
+        finalColor += (calcDiffuseIntensity(surfacePos, surfaceNorm, lights[i], normalizedLightVector) * diffuseColor 
+                       + calcSpecularIntensity(surfacePos, surfaceNorm, ray, normalizedLightVector) * specularColor) * lights[i].color;
     }
     //Final Color calculation
     vec4 sumOfColors = globalIntensity * globalColor + finalColor;
     
-    return t1 + sumOfColors;
-    
+    //return t1 + sumOfColors;
+    return cubeMap + sumOfColors;
     
     //vec4 t2 = texture(iChannel1, vp.uv );
     //return vec4(mix(t1.rgb,t2.rgb, .5), 1.0);
