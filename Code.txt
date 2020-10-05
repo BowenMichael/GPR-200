@@ -135,7 +135,7 @@ void initViewport(out sViewport vp,
     vp.uv = vp.pixelCoord * vp.resolutionInv;
     vp.ndc = vp.uv * 2.0 - 1.0;
     vp.size = sDCoord(vp.aspectRatio, 1.0) * viewportHeight;
-    vp.viewportPoint = asPoint(sBasis(vp.ndc * vp.size * 0.5, -vp.focalLength));
+    vp.viewportPoint = asPoint(sBasis(vp.ndc * vp.size * .5, -vp.focalLength));
 }
 
 struct pLight
@@ -235,9 +235,11 @@ color4 calcColor(in sViewport vp, in sRay ray)
     distort(loc);
     vec4 t1 = texture(iChannel0, loc);
     
-    vec3 animate = vec3(sin(iTime), 0.0, cos(iTime));
-    vec3 rayVec = ray.direction.xyz+animate;
-	vec4 cubeMap = texture(iChannel2, rayVec);
+    vec3 animate = vec3(1.0, 1.0, 1.0);
+    //vec3 rayVec = ray.direction.xyz+animate;
+    vec3 rayVec = vp.viewportPoint.xyz + animate;
+    //rayVec = normalize(rayVec);
+	vec4 cubeMap = texture(iChannel2, normalize(rayVec)); //it apears like the vector is only looking at one of the walls of the cube map????
     
     //Lights init
     pLight lights[MAX_LIGHTS];
@@ -261,6 +263,8 @@ color4 calcColor(in sViewport vp, in sRay ray)
     }
     //Final Color calculation
     vec4 sumOfColors = globalIntensity * globalColor + finalColor;
+    
+    return cubeMap;
     
     //return t1 + sumOfColors;
     return cubeMap + sumOfColors;
