@@ -1,4 +1,10 @@
 // GLSL STARTER CODE BY DANIEL S. BUCKSTEIN
+//  -> COMMON TAB (shared with all other tabs)
+float globalIntensity = .1;
+vec4 globalColor = vec4(1.0);
+const int MAX_LIGHTS = 5;
+const bool RUN_WORMHOLE = true; //set to true to run wormhole
+#define PI 3.1415926538
 
 //------------------------------------------------------------
 // TYPE ALIASES & UTILITY FUNCTIONS
@@ -49,6 +55,13 @@ sVector asVector(in sBasis v)
 
 
 // lengthSq: calculate the squared length of a vector type
+//    x: input whose squared length to calculate
+sScalar lengthSq(sScalar x)
+{
+    return (x * x);
+    //return dot(x, x); // for consistency with others
+}
+
 sScalar lengthSq(sDCoord x)
 {
     return dot(x, x);
@@ -62,6 +75,29 @@ sScalar lengthSq(sVector x)
     return dot(x, x);
 }
 
+float squareValue(float v){
+	return v*v;
+}
+
+vec3 squareValue(vec3 v){
+	return vec3(squareValue(v.x), squareValue(v.y), squareValue(v.z));
+}
+
+//Rotation Functions
+//mat3(1.0,0.0,0.0,0.0,c,s,0.0,-s,c); //Rotates around the X axis
+//mat3(c,0.0,-s,0.0		  ,1.0,0.0,s,0.0,c); //rotates around the y axis
+//mat3(c  ,s  ,0.0,-s ,c  ,0.0,0.0,0.0,1.0); //rotates around the z axis
+mat3 rotXAxis3D(in float theta){
+    float c = cos(theta);
+    float s = sin(theta);
+    return mat3(1.0,0.0,0.0,0.0,c,s,0.0,-s,c); //Rotates around the X axis
+}
+
+mat3 rotYAxis3D(in float theta){
+    float c = cos(theta);
+    float s = sin(theta);
+    return mat3(c,0.0,-s,0.0,1.0,0.0,s,0.0,c); //rotates around the y axis
+}
 
 //------------------------------------------------------------
 // VIEWPORT INFO
@@ -167,42 +203,33 @@ void initRayOrtho(out sRay ray,
 
 
 //------------------------------------------------------------
-// RENDERING FUNCTIONS
+/*
+// GLSL FRAGMENT SHADER STRUCTURE WITH COMMON TAB
+//  -> This is (likely) how Shadertoy compiles buffer tabs:
 
-// calcColor: calculate the color of current pixel
-//	  vp:  input viewport info
-//	  ray: input ray info
-color4 calcColor(in sViewport vp, in sRay ray)
+// latest version or whichever is used
+#version 300 es
+
+// **CONTENTS OF COMMON TAB PASTED HERE**
+
+// PROGRAM UNIFORMS (see 'Shader Inputs' dropdown)
+
+// **CONTENTS OF BUFFER TAB PASTED HERE**
+
+// FRAGMENT SHADER INPUTS (more on this later)
+
+// FRAGMENT SHADER OUTPUTS (framebuffer render target(s))
+//out vec4 rtFragColor; // no specific target
+layout (location = 0) out vec4 rtFragColor; // default
+
+void main()
 {
-    // test inputs
-    //return color4(ray.direction.xyz == vp.viewportPoint.xyz); // pass
-    //return color4(lengthSq(vp.viewportPoint.xy) >= 0.25); // pass
-    //return color4(vp.uv, 0.0, 0.0);
-    //return color4(vp.ndc, 0.0, 0.0);
-    return vp.viewportPoint;
+    // Call 'mainImage' in actual shader main, which is 
+	// 	our prototyping interface for ease of use.
+	//		rtFragColor:  shader output passed by reference,
+	//			full vec4 read in 'mainImage' as 'fragColor'
+	//		gl_FragCoord: GLSL's built-in pixel coordinate,
+	//			vec2 part read in 'mainImage' as 'fragCoord'
+    mainImage(rtFragColor, gl_FragCoord.xy);
 }
-
-
-//------------------------------------------------------------
-// SHADERTOY MAIN
-
-// mainImage: process the current pixel (exactly one call per pixel)
-//    fragColor: output final color for current pixel
-//    fragCoord: input location of current pixel in image (in pixels)
-void mainImage(out color4 fragColor, in sCoord fragCoord)
-{
-    // viewing plane (viewport) inputs
-    const sBasis eyePosition = sBasis(0.0);
-    const sScalar viewportHeight = 2.0, focalLength = 1.5;
-    
-    // viewport info
-    sViewport vp;
-
-    // ray
-    sRay ray;
-    
-    // render
-    initViewport(vp, viewportHeight, focalLength, fragCoord, iResolution.xy);
-    initRayPersp(ray, eyePosition, vp.viewportPoint.xyz);
-    fragColor += calcColor(vp, ray);
-}
+*/
