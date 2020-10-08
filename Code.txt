@@ -91,7 +91,7 @@ mat3 rotXAxis3D(in float theta){
 mat3 rotYAxis3D(in float theta){
     float c = cos(theta);
     float s = sin(theta);
-    return mat3(c,0.0,-s,0.0		  ,1.0,0.0,s,0.0,c); //rotates around the y axis
+    return mat3(c,0.0,-s,0.0,1.0,0.0,s,0.0,c); //rotates around the y axis
 }
 
 
@@ -303,10 +303,9 @@ color4 calcColor(in sViewport vp, in sRay ray)
     //CubeMap (Code could be contensed for a easier viewing experiance)
     vec3 rayVec = ray.direction.xyz;
    
+    vec2 mousePointInspace = (iMouse.xy * vp.resolutionInv)  * 2.0 - 1.0; 
     //rotation based on mouse position
-	vec2 theta = (iMouse.xy* vp.resolutionInv)*4.0; //Makes the mouse position more proportinal to the output screen 
-    theta.y += PI * .25;//allows for a better viewing experiance of the scene
-    theta *= 2.0; //allows for a better viewing experiance of the scene
+	vec2 theta = mousePointInspace*2.0*PI; //Makes the mouse position more proportinal to the output screen 
     rayVec *= rotXAxis3D(-theta.y) * rotYAxis3D(theta.x); //rotates the scene to an angle based on the mouse position
     //distort(rayVec);//Distort for fun
     
@@ -319,7 +318,7 @@ color4 calcColor(in sViewport vp, in sRay ray)
     
     //Lights init
     pLight lights[MAX_LIGHTS];
-    vec2 mousePointInspace = (iMouse.xy * vp.resolutionInv)  * 2.0 - 1.0; //turns mouse XY into a NDC scale
+   //turns mouse XY into a NDC scale
     
     //other light implementation that don't quite work together very well. I recomend leaving them commented
     //initPointLight(lights[0], vec3(vp.resolution.x*.5, vp.resolution.y*.5, 0.0), vec4(1.0), 10.0);
@@ -332,7 +331,7 @@ color4 calcColor(in sViewport vp, in sRay ray)
     //vec3 surfaceNorm = normalize(vec3(vp.viewportPoint.xy, 1.0)); //other way to normalize
     vec4 t2;
     if(RUN_WORMHOLE){ // run Wormhole
-         initPointLight(lights[1], vec3(mousePointInspace.x,  mousePointInspace.y, 0.0), vec4(1.0), 1.0); //lighting with mouse when circle exists
+        initPointLight(lights[1], vec3(mousePointInspace.x,  mousePointInspace.y, 0.0), vec4(1.0), 1.0); //lighting with mouse when circle exists
         if(circleExists(ray, sphere, position)){
             //Unneccacary code
             //position.z = squareValue(sphere.radius) - ((position.x*position.x)+(position.y*position.y));
@@ -383,10 +382,10 @@ color4 calcColor(in sViewport vp, in sRay ray)
     //return t2 + sumOfColors; 
     
     //rendering for part 2
-    return t1;
+    //return t1;
     
     //rendering for part 3
-    return t1 + sumOfColors;
+    //return t1 + sumOfColors;
     
     //Rendering for part 4
     return cube + sumOfColors;
