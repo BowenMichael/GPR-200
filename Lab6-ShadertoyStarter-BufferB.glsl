@@ -11,12 +11,13 @@ void mainImage(out color4 fragColor, in sCoord fragCoord)
     // test UV for input image
     sCoord uv = fragCoord / iChannelResolution[0].xy;
     
-	vec4 textureColor = texture(iChannel0, uv);
-    //vec3 modifier = vec3(-textureColor);
-	vec3 brightColor = vec3(2.0 * (squareValue(textureColor.xyz)) -1.0);
-    fragColor = vec4(brightColor.rgb, 1.0);
-
-        
+    vec4 tex = texture(iChannel0, uv);
+    vec4 BrightColor;
+    float brightness = dot(tex.rgb, vec3(0.2126, 0.7152, 0.0722));
+    brightness -= 2.5; //shifts the input value to move the function output along the x axis
+    float fallOffBrightness = brightness/(brightness+1.0)-2.0; //Calculates the value based on its prightness
+    BrightColor = vec4(vec3(fallOffBrightness), 1.0);//
+         
         
     // TESTING
     // set iChannel0 to 'Misc/Buffer A' and fetch sample
