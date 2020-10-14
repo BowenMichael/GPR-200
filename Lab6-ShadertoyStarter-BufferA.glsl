@@ -1,5 +1,7 @@
-// GLSL STARTER CODE BY DANIEL S. BUCKSTEIN
-//  -> BUFFER A TAB (scene)
+// Buffer A by Michael Bowen
+//  -> Buf A
+//
+//Desc: Calculation for revolving cube map
 
 //------------------------------------------------------------
 // RENDERING FUNCTIONS

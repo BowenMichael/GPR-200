@@ -1,41 +1,58 @@
-// GLSL STARTER CODE BY DANIEL S. BUCKSTEIN
-//  -> buf c
+// Buffer C by Michael Bowen
+//  -> Buf C
+//source for information regarding multi-pass/optimizations: http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
+//
+//Desc: Calculates the x-axis gaussian blur with a convolution kernal using weighted sampling based on pascales triangle
 
 //------------------------------------------------------------
-// SHADERTOY MAIN
+// SHADERTOY Buffer C
 
-uniform float weight[5] = float[]() //based on the gausian function. F((value we want)/(sum at that index)) = weight at kernal
+
 
 // mainImage: process the current pixel (exactly one call per pixel)
 //    fragColor: output final color for current pixel
 //    fragCoord: input location of current pixel in image (in pixels)
 void mainImage(out color4 fragColor, in sCoord fragCoord)
 {
-
     // setup
-    // test UV for input image
-    
-    int x,y;
-    float weightSum;
-    vec3 tex;
-    vec2 pixelSize = 1.0 / iChannelResolution[0].xy;
-    
-    for(x= kernalSize-1; x >= 0; ++x){
-        sCoord uv = vec2(fragCoord.x + float(x), fragCoord.y) * pixelSize;
-        vec4 textureColor = texture(iChannel0, uv);
+	//float weight[3] = float[](6.0, 4.0, 1.0); //based on the pascels triangle. half of a given row
+	float weight[3] = float[](0.375, 0.25, 0.625); //alternate implementation divides by the sum removing a division calculation from the code(weight at n)/(2^n) = weight at kernal
+    vec2 pixelSize = 1.0 / iChannelResolution[0].xy; //invRes
+    vec2 uv = vec2(fragCoord) * pixelSize; //define uv plane
+
+    //Convolution Experimentation Declaration
+    //float weightSum;
+    //vec3 tex;
+
+    //sampling
+	int i;
+    vec4 textureColor = texture(iChannel0, uv) * weight[0]; //runs outside the loop because the weight index at zero only runs once
+    for(i= weight.length() - 1; i > 0; --i){
+        
+        //All the pixel samples to the right
+        uv = (vec2(fragCoord) + vec2(float(i), 0.0)) * pixelSize; //since pixel size is the measure of a single UV pixel can we get rid of the call to frag coord?
+        textureColor += texture(iChannel0, uv) * weight[i];
+        
+        //All the pixel samples to the left
+        uv = (vec2(fragCoord) - vec2(float(i), 0.0)) * pixelSize;
+        textureColor += texture(iChannel0, uv) * weight[i];
+        
+        //Convolution experimentation
         //float weight = length(textureColor);
-        weightSum += kernal[x];
-    	tex += weight * textureColor.rgb;
+        //weightSum += weight[i];
+    	//tex += weight * textureColor.rgb;
     }
-    float inverseWeightSum = 1.0/weightSum;
-    vec4 normalizedColor = vec4(vec3(inverseWeightSum * tex), 1.0);
-    fragColor = normalizedColor;
-    
+
+    fragColor = textureColor;
     
     // TESTING
     // set iChannel0 to 'Misc/Buffer A' and fetch sample
     //fragColor = tex;
     
-    //Convolution
+    //more Convolution experimentation
+    //float inverseWeightSum = 1.0/weightSum; //don't need because of the construction of the weight array
+    //vec4 finalColor = vec4(vec3(textureColor.rgb*inverseWeightSum), 1.0);
+    //vec4 finalColor = vec4(vec3(textureColor.rgb), 1.0);
+    //vec4 finalColor = textureColor;
     
 }

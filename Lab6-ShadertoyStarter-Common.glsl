@@ -1,5 +1,8 @@
-// GLSL STARTER CODE BY DANIEL S. BUCKSTEIN
-//  -> COMMON TAB (shared with all other tabs)
+// Common by Michael Bowen
+//  -> Common
+//
+//Desc: Common functions shared across tabs
+
 float globalIntensity = .1;
 vec4 globalColor = vec4(1.0);
 const int MAX_LIGHTS = 5;
