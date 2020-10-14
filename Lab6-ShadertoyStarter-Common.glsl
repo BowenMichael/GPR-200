@@ -9,6 +9,7 @@ const int MAX_LIGHTS = 5;
 const bool RUN_WORMHOLE = true; //set to true to run wormhole
 #define PI 3.1415926538
 vec4 LUMINANCE = vec4(.2125,.07154,.0721, 1.0);
+float weight[3] = float[](0.375, 0.25, 0.625); //alternate implementation divides by the sum removing a division calculation from the code(weight at n)/(2^n) = weight at kernal
 
 //------------------------------------------------------------
 // TYPE ALIASES & UTILITY FUNCTIONS
@@ -104,6 +105,18 @@ mat3 rotYAxis3D(in float theta){
     float c = cos(theta);
     float s = sin(theta);
     return mat3(c,0.0,-s,0.0,1.0,0.0,s,0.0,c); //rotates around the y axis
+}
+
+float calcLuminance(in vec4 color){
+	return dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
+}
+
+vec4 screen(vec4 color1, vec4 color2){
+    return 1.0 - (1.0 - color1) * (1.0 - color2); //screen
+}
+
+vec4 softLight(vec4 color1, vec4 color2){
+	return (1.0 - 2.0*color2)*squareValue(color1) +2.0*color2*color1;
 }
 
 //------------------------------------------------------------

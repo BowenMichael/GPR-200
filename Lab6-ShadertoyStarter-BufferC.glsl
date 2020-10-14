@@ -14,9 +14,11 @@
 //    fragCoord: input location of current pixel in image (in pixels)
 void mainImage(out color4 fragColor, in sCoord fragCoord)
 {
-    // setup
-	//float weight[3] = float[](6.0, 4.0, 1.0); //based on the pascels triangle. half of a given row
-	float weight[3] = float[](0.375, 0.25, 0.625); //alternate implementation divides by the sum removing a division calculation from the code(weight at n)/(2^n) = weight at kernal
+    //global variables
+	//float weight[3] = float[](0.375, 0.25, 0.625); // divides by the sum removing a division calculation from the code(weight at n)/(2^n) = weight at kernal
+    //Convolution experimentation: float weight[3] = float[](6.0, 4.0, 1.0); //based on the pascels triangle. half of a given row
+    
+    //setup
     vec2 pixelSize = 1.0 / iChannelResolution[0].xy; //invRes
     vec2 uv = vec2(fragCoord) * pixelSize; //define uv plane
 

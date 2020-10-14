@@ -16,7 +16,7 @@ void mainImage(out color4 fragColor, in sCoord fragCoord)
     vec4 tex = texture(iChannel0, uv);
     
     //Bright Pass
-    float brightness = dot(tex.rgb, vec3(0.2126, 0.7152, 0.0722)); //luminance calc
+    float brightness = calcLuminance(tex); //luminance calc
     float fallOffBrightness = (brightness - .5)*.5; //linear fall off
     fragColor = vec4(vec3(fallOffBrightness), 1.0); //Mapping the brightness of the image to a grayscale
     

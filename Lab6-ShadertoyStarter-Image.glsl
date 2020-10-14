@@ -20,8 +20,8 @@ void mainImage(out color4 fragColor, in sCoord fragCoord)
     vec4 t3 = texture(iChannel2, uv);
     vec4 mixedColor = t1 + t2; //add
     mixedColor = mix(t1, t2, .5); //mix
-    mixedColor = 1.0 - (1.0 - t1) * (1.0 - t2); //screen
-    mixedColor = (1.0 - 2.0*t2)*squareValue(t1) +2.0*t2*t1; //Pegtop's formula soft light compositing
+    mixedColor = screen(t1, t2); //screen
+    mixedColor = softLight(t1, t2); //Pegtop's formula soft light compositing
 
     fragColor = mixedColor; //Mixed Colors
     //fragColor = t3; //bright pass
