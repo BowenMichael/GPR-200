@@ -5,6 +5,7 @@ vec4 globalColor = vec4(1.0);
 const int MAX_LIGHTS = 5;
 const bool RUN_WORMHOLE = true; //set to true to run wormhole
 #define PI 3.1415926538
+vec4 LUMINANCE = vec4(.2125,.07154,.0721, 1.0);
 
 //------------------------------------------------------------
 // TYPE ALIASES & UTILITY FUNCTIONS
@@ -81,6 +82,9 @@ float squareValue(float v){
 
 vec3 squareValue(vec3 v){
 	return vec3(squareValue(v.x), squareValue(v.y), squareValue(v.z));
+}
+vec4 squareValue(vec4 v){
+	return vec4(squareValue(v.x), squareValue(v.y), squareValue(v.z), squareValue(v.a));
 }
 
 //Rotation Functions

@@ -17,10 +17,13 @@ void mainImage(out color4 fragColor, in sCoord fragCoord)
     // set iChannel0 to 'Misc/Buffer A' and fetch sample
     vec4 t1 = texture(iChannel0, uv);
     vec4 t2 = texture(iChannel1, uv);
-    t2 *= t2.a; //converts t2 alpha 
+    //t2 *= t2.a; //converts t2 alpha 
     vec4 t3 = texture(iChannel2, uv);
-    vec4 mixedColor = t1 + t2;
-    mixedColor = mix(t1, t2, 1.0);
+    vec4 mixedColor = t1 + t2; //add
+    mixedColor = mix(t1, t2, 1.0); //mix
+    mixedColor = 1.0 - (1.0 - t1) * (1.0 - t2); //screen
+    mixedColor = (1.0 - 2.0*t2)*squareValue(t1) +2.0*t2*t1; //Pegtop's formula
+
     fragColor = mixedColor;
     //fragColor = t3;
     //fragColor = t2;

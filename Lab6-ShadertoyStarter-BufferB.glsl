@@ -17,7 +17,7 @@ void mainImage(out color4 fragColor, in sCoord fragCoord)
     brightness -= 2.5; //shifts the input value to move the function output along the x axis
     float fallOffBrightness = brightness/(brightness+1.0)-2.0; //Calculates the value based on its prightness
     BrightColor = vec4(vec3(fallOffBrightness), 1.0);//
-         
+    fragColor = BrightColor;
         
     // TESTING
     // set iChannel0 to 'Misc/Buffer A' and fetch sample
