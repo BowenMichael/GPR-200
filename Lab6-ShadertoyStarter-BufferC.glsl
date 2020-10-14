@@ -16,9 +16,8 @@ void mainImage(out color4 fragColor, in sCoord fragCoord)
     int x,y;
     float weightSum;
     vec3 tex;
-    
-    for(x= 0; x < kernalSize; x++){        
-        for(y = 0; y < kernalSize; y++){
+    for(x= -2; x < 3; x++){
+        for(y = -2; y < 3; y++){
         sCoord uv = vec2(fragCoord.x + float(x), fragCoord.y + float(y)) / iChannelResolution[0].xy;
         vec4 textureColor = texture(iChannel0, uv);
         float weight = length(textureColor);
