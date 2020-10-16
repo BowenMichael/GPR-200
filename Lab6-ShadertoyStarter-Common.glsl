@@ -91,6 +91,14 @@ vec4 squareValue(vec4 v){
 	return vec4(squareValue(v.x), squareValue(v.y), squareValue(v.z), squareValue(v.a));
 }
 
+float powerOfTwo (in float base, in int power){
+    for(int i = power - 1; i >= 0; --i){
+    	base *= base;
+    }
+	return base;
+}
+
+
 //Rotation Functions
 //mat3(1.0,0.0,0.0,0.0,c,s,0.0,-s,c); //Rotates around the X axis
 //mat3(c,0.0,-s,0.0		  ,1.0,0.0,s,0.0,c); //rotates around the y axis
@@ -118,6 +126,7 @@ vec4 screen(vec4 color1, vec4 color2){
 vec4 softLight(vec4 color1, vec4 color2){
 	return (1.0 - 2.0*color2)*squareValue(color1) +2.0*color2*color1;
 }
+
 
 //------------------------------------------------------------
 // VIEWPORT INFO
@@ -181,6 +190,34 @@ void initViewport(out sViewport vp,
     vp.viewportPoint = asPoint(sBasis(vp.ndc * vp.size * 0.5, -vp.focalLength));
 }
 
+struct pLight
+{
+	vec4 center;
+    vec4 color;
+    float intensity;
+};
+
+void initPointLight(out pLight light, in vec3 center, in vec4 color, in float intensity)
+{
+  	light.center = asPoint(center);
+    light.color = color;
+    light.intensity = intensity;
+    
+}
+
+struct sSphere
+{
+	float radius;
+    vec4 center;
+};
+
+void initSphere (out sSphere sphere, in vec3 center, in float radius) 
+{
+	sphere.center = asPoint(center);
+    sphere.radius = radius;
+
+}
+
 
 //------------------------------------------------------------
 // RAY INFO
@@ -221,6 +258,35 @@ void initRayOrtho(out sRay ray,
     initRayPersp(ray, eyePosition + sBasis(viewport.xy, 0.0), viewport);
 }
 
+bool circleExists(sRay ray, sSphere sphere, inout vec3 dp) {
+    dp.xy = ray.direction.xy - sphere.center.xy; //ray from pixel toward the center of the circle
+    float lSq = lengthSq(dp.xy), //the length function calulates the square length so it is more efficent just square it
+          rSq = squareValue(sphere.radius);
+    if(lSq <= rSq){
+        return true;
+    }
+    return false;
+}
+
+float calcDiffuseIntensity(in vec3 surfacePos, in vec3 surfaceNorm, in pLight light, inout vec3 normalizedLightVector){
+        //Diffuse Intensity
+        vec3 lightVector = light.center.xyz - surfacePos;
+        float lightVectorLengthSq = lengthSq(lightVector); //saves a square root function
+        normalizedLightVector = lightVector * inversesqrt(lightVectorLengthSq); //declaration of var
+        float diffusionCoefficent = max(0.0, (dot(surfaceNorm, normalizedLightVector)));
+        float attenuation = (1.0 - lightVectorLengthSq/squareValue(light.intensity));
+        return diffusionCoefficent * attenuation; 
+}
+
+float calcSpecularIntensity(in vec3 surfacePos, in vec3 surfaceNorm, in sRay ray, in vec3 normalizedLightVector ){
+		//Blinn-Phong Reflectance
+        vec3 viewVector = ray.origin.xyz - surfacePos; //Created because viewVector is used twice
+        vec3 normalViewVector = viewVector * inversesqrt(lengthSq(viewVector)); //Multiplied by the inverse and uses the dquared length function
+        vec3 halfWayVector = normalizedLightVector + normalViewVector; //Used twice 
+        vec3 normalHalfWayVector = halfWayVector * inversesqrt(lengthSq(halfWayVector));
+        float specCoefficent = max(0.0, dot(surfaceNorm, normalHalfWayVector)); //Multiplied by the inverse and uses the dquared length function
+        return powerOfTwo(specCoefficent,7); //improved eff by removing pow function and adding a power of two function
+}
 
 //------------------------------------------------------------
 /*
