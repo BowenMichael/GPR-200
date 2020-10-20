@@ -106,13 +106,17 @@ float powerOfTwo (in float base, in int power){
 mat3 rotXAxis3D(in float theta){
     float c = cos(theta);
     float s = sin(theta);
-    return mat3(1.0,0.0,0.0,0.0,c,s,0.0,-s,c); //Rotates around the X axis
+    return mat3(1.0,0.0,0.0,
+                0.0,c,s,
+                0.0,-s,c); //Rotates around the X axis
 }
 
 mat3 rotYAxis3D(in float theta){
     float c = cos(theta);
     float s = sin(theta);
-    return mat3(c,0.0,-s,0.0,1.0,0.0,s,0.0,c); //rotates around the y axis
+    return mat3(c,0.0,-s,
+                0.0,1.0,0.0,
+                s,0.0,c); //rotates around the y axis
 }
 
 float calcLuminance(in vec4 color){
@@ -126,6 +130,7 @@ vec4 screen(vec4 color1, vec4 color2){
 vec4 softLight(vec4 color1, vec4 color2){
 	return (1.0 - 2.0*color2)*squareValue(color1) +2.0*color2*color1;
 }
+
 
 
 //------------------------------------------------------------
@@ -258,6 +263,13 @@ void initRayOrtho(out sRay ray,
     initRayPersp(ray, eyePosition + sBasis(viewport.xy, 0.0), viewport);
 }
 
+//calc rotation angle of a vec3 from pixel space
+
+
+vec2 pixelToNdc(in vec2 pixel, in sViewport vp){
+	return (pixel.xy * vp.resolutionInv)  * 2.0 - 1.0; 
+}
+
 bool circleExists(sRay ray, sSphere sphere, inout vec3 dp) {
     dp.xy = ray.direction.xy - sphere.center.xy; //ray from pixel toward the center of the circle
     float lSq = lengthSq(dp.xy), //the length function calulates the square length so it is more efficent just square it
@@ -285,8 +297,39 @@ float calcSpecularIntensity(in vec3 surfacePos, in vec3 surfaceNorm, in sRay ray
         vec3 halfWayVector = normalizedLightVector + normalViewVector; //Used twice 
         vec3 normalHalfWayVector = halfWayVector * inversesqrt(lengthSq(halfWayVector));
         float specCoefficent = max(0.0, dot(surfaceNorm, normalHalfWayVector)); //Multiplied by the inverse and uses the dquared length function
-        return powerOfTwo(specCoefficent,7); //improved eff by removing pow function and adding a power of two function
+        return powerOfTwo(specCoefficent, 3); //improved eff by removing pow function and adding a power of two function
 }
+
+
+
+vec4 lambertianReflectance(in pLight lights, in sRay ray, in vec3 normal, in vec3 position, vec4 diffuseColor, vec4 specularColor ){
+
+
+    vec3 normalizedLightVector;
+    float diffuse = calcDiffuseIntensity(position, normal, lights, normalizedLightVector);
+    float specular = calcSpecularIntensity(position, normal, ray, normalizedLightVector );
+
+    vec4 sumOfColors = globalIntensity * globalColor + ((diffuse * diffuseColor + specular * specularColor) * lights.color);    
+    return sumOfColors;
+}
+
+vec4 reflection(in sRay ray, in vec3 normal, samplerCube iChannel){
+    return  texture(iChannel, reflect(ray.direction.xyz, normal));// + (calcDiffuseIntensity(position, normal, lights, normalizedLightVector)* luminance);
+}
+
+void calcCircleZ(in sSphere sphere, inout vec3 position, inout vec3 normal){
+		position.z = squareValue(sphere.radius) - ((position.x*position.x)+(position.y*position.y));
+        position.xy = sphere.center.xy + vec2(position.x, position.y);
+        normal.xy = (position.xy - sphere.center.xy) / sphere.radius;
+}
+
+/*vec3 mouseVectorTanslation(in vec2 mouse, in sViewport vp, inout vec3 rayDir){
+	//rotation based on mouse position
+
+  
+    rayDir *= rotXAxis3D(-theta.y) * rotYAxis3D(theta.x); //rotates the scene to an angle based on the mouse position
+    return rayDir;
+}*/
 
 //------------------------------------------------------------
 /*
