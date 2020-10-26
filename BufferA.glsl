@@ -16,33 +16,46 @@ color4 calcColor(in sViewport vp, in sRay ray)
     //cube map init
     vec3 rayVec = ray.direction.xyz;
     
+    //rotation based on mouse position
+    vec2 mousePointInspace = (iMouse.xy * vp.resolutionInv)  * 2.0 - 1.0; 
+    vec2 theta = mousePointInspace*2.0*PI; //Makes the mouse position more proportinal to the output screen 
+    rayVec *= rotXAxis3D(-theta.y) * rotYAxis3D(theta.x); //rotates the scene to an angle based on the mouse position
+    
+    
     //surface init
     vec3 position = vec3(vp.pixelCoord, -1.0); //surface position
     vec3 normal = vec3(0.0, 0.0, 1.0); //surface 
     
     //Cube init
-    sSphere sphere[5];
-    initSphere(sphere[1], vec3(sin(iTime), 0.0, 0.0), .5);
-    initSphere(sphere[0], vec3(0.0, 0.0, 0.0), .25);
+    const int maxSphere = 20;
+    sSphere sphere[maxSphere];
+    //initSphere(sphere[1], vec3(sin(iTime), 0.0, 0.0), .5);
+    float randMult = rand(vp.ndc);
+    float speed = -iTime;
+    for(int i = 0; i < maxSphere; i++)
+    	initSphere(sphere[i], vec3((float(i) * .5  - 3.0) + cos(speed),   sin(speed), 0.0), .25);
     
     
     //Light init
     pLight lights[MAX_LIGHTS];
-    initPointLight(lights[0], vec3(0.0, 0.0, 2.0), vec4(1.0), 20.0);
+    initPointLight(lights[0], vec3(0.0, 0.0, 1.0), vec4(1.0), 5.0);
     
     //light color init
-    vec4 specularColor = vec4(1.0);
+    vec4 specularColor = vec4(1.0) * .5;
     vec4 diffuseColor = vec4(normal * 0.5 + 0.5, 1.0);
     
-    for(int i = 0; i < 5; i++){
+    for(int i = 0; i < maxSphere; i++){
         vec3 dp;
         if(circleExists(ray, sphere[i], position)) {
             calcCircleZ(sphere[i], position, normal);
             //return lambertianReflectance(lights[i], ray, normal, position);
             //return texture(iChannel0, normal);
-            vec4 color = reflection(ray, normal, iChannel0);
-            diffuseColor = color;
-            return lambertianReflectance(lights[0], ray, normal, position, diffuseColor, specularColor);
+            //vec3 colorVec = reflection(rayVec, normal);
+            vec3 colorVec = refraction(rayVec, normal, 1.33);
+            vec4 textureColor = texture(iChannel1, reflect(rayVec * .1, normal).xy);
+            diffuseColor = texture(iChannel0, colorVec);
+            return lambertianReflectance(lights[0], ray, normal, position, diffuseColor, specularColor)*.25
+                + lambertianReflectance(lights[0], ray, normal, position, textureColor, specularColor);
         }
     }
     

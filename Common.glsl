@@ -42,6 +42,10 @@ float weight[3] = float[](0.375, 0.25, 0.625); //alternate implementation divide
 #define color4 vec4
 
 
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
 // asPoint: promote a 3D vector into a 4D vector 
 //	representing a point in space (w=1)
 //    v: input 3D vector to be converted
@@ -297,7 +301,7 @@ float calcSpecularIntensity(in vec3 surfacePos, in vec3 surfaceNorm, in sRay ray
         vec3 halfWayVector = normalizedLightVector + normalViewVector; //Used twice 
         vec3 normalHalfWayVector = halfWayVector * inversesqrt(lengthSq(halfWayVector));
         float specCoefficent = max(0.0, dot(surfaceNorm, normalHalfWayVector)); //Multiplied by the inverse and uses the dquared length function
-        return powerOfTwo(specCoefficent, 3); //improved eff by removing pow function and adding a power of two function
+        return powerOfTwo(specCoefficent, 2); //improved eff by removing pow function and adding a power of two function
 }
 
 
@@ -313,8 +317,14 @@ vec4 lambertianReflectance(in pLight lights, in sRay ray, in vec3 normal, in vec
     return sumOfColors;
 }
 
-vec4 reflection(in sRay ray, in vec3 normal, samplerCube iChannel){
-    return  texture(iChannel, reflect(ray.direction.xyz, normal));// + (calcDiffuseIntensity(position, normal, lights, normalizedLightVector)* luminance);
+vec3 refraction(in vec3 ray, in vec3 normal, float eta ){
+    
+    return refract(ray, normal, eta); // + (calcDiffuseIntensity(position, normal, lights, normalizedLightVector)* luminance);
+}
+
+vec3 reflection(in vec3 ray, in vec3 normal){
+    //return 2.0*normal*dot(normal, ray) - ray;
+    return reflect(ray, normal); // + (calcDiffuseIntensity(position, normal, lights, normalizedLightVector)* luminance);
 }
 
 void calcCircleZ(in sSphere sphere, inout vec3 position, inout vec3 normal){
