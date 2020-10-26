@@ -13,6 +13,8 @@
 //	  ray: input ray info
 color4 calcColor(in sViewport vp, in sRay ray)
 {
+
+    
     //cube map init
     vec3 rayVec = ray.direction.xyz;
     
@@ -50,11 +52,31 @@ color4 calcColor(in sViewport vp, in sRay ray)
             calcCircleZ(sphere[i], position, normal);
             //return lambertianReflectance(lights[i], ray, normal, position);
             //return texture(iChannel0, normal);
-            //vec3 colorVec = reflection(rayVec, normal);
-            vec3 colorVec = refraction(rayVec, normal, 1.33);
-            vec4 textureColor = texture(iChannel1, reflect(rayVec * .1, normal).xy);
+            
+            //reflection
+            float percentOfCubeMap = .25;
+            vec2 textureVector = reflect(rayVec * .1, normal).xy;
+            vec3 colorVec = reflection(rayVec, normal);
+            
+            //refraction
+            //float percentOfCubeMap = 1.0;
+            //float eta = 1.33; //reflection index of water
+            //vec3 colorVec = refraction(rayVec, normal, eta);
+            //vec2 textureVector = refract(rayVec, normal, eta).xy;
+            
+            vec4 textureColor;
+            if(mod(float(i), 3.0) == 0.0)
+            	textureColor = texture(iChannel1, textureVector);
+            else if(mod(float(i), 3.0) == 1.0)
+                textureColor = texture(iChannel2, textureVector);
+            else if(mod(float(i), 3.0) == 2.0)
+            	textureColor = texture(iChannel3, textureVector);
+                
+            
+            
+            
             diffuseColor = texture(iChannel0, colorVec);
-            return lambertianReflectance(lights[0], ray, normal, position, diffuseColor, specularColor)*.25
+            return lambertianReflectance(lights[0], ray, normal, position, diffuseColor, specularColor)*percentOfCubeMap
                 + lambertianReflectance(lights[0], ray, normal, position, textureColor, specularColor);
         }
     }

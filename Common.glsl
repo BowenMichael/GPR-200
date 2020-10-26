@@ -224,7 +224,6 @@ void initSphere (out sSphere sphere, in vec3 center, in float radius)
 {
 	sphere.center = asPoint(center);
     sphere.radius = radius;
-
 }
 
 
