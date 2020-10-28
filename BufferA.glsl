@@ -6,7 +6,7 @@
 //------------------------------------------------------------
 // RENDERING FUNCTIONS
 
-
+const float  ior = 1.33;
 
 // calcColor: calculate the color of current pixel
 //	  vp:  input viewport info
@@ -14,7 +14,7 @@
 color4 calcColor(in sViewport vp, in sRay ray)
 {
 
-    
+    float eta = 1.0 / ior;
     //cube map init
     vec3 rayVec = ray.direction.xyz;
     
@@ -31,11 +31,14 @@ color4 calcColor(in sViewport vp, in sRay ray)
     //Cube init
     const int maxSphere = 20;
     sSphere sphere[maxSphere];
+    sSphere rSphere[maxSphere];
     //initSphere(sphere[1], vec3(sin(iTime), 0.0, 0.0), .5);
     //float randMult = rand(vp.ndc);
     //float speed = -iTime;
-    for(int i = 0; i < maxSphere; i++)
-    	initSphere(sphere[i], vec3((float(i) * .5  - 3.0),  .75, 0.0), .25);
+    for(int i = 0; i < maxSphere; i++){
+        initSphere(sphere[i], vec3((float(i) * .5  - 3.0),  .75, 0.0), .25);
+        initSphere(rSphere[i], vec3((float(i) * .5 - 3.0), .25,0.0), .25);
+    }
     
     
     
@@ -51,40 +54,75 @@ color4 calcColor(in sViewport vp, in sRay ray)
     
     initPlane(planes[0], vec3(0.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0), vec3(.5, -1.0 , 0.0));
     
-   	if(vp.ndc.x > 0.0){
-        vec3 planeVec = reflection(rayVec, planes[0].normal.xyz);
+   	if(vp.ndc.x > 0.15){
+         vec2 coord = vp.pixelCoord.xy;
+    	vec2 mouse = iMouse.xy;
+    	vec2 resInv = vp.resolutionInv.xy;
+    
+    	vec2 cPos =  (coord - mouse) * resInv;
+    	float cLength = length(cPos);
+
+   		vec2 uv = coord * resInv + (cPos/cLength)*cos(cLength*12.0-iTime*4.0)*0.03;
+        vec3 planeVec;
+        if(rayVec.z <= 0.0)
+        	planeVec = refraction(rayVec, planes[0].normal.xyz, eta);
+        else
+            planeVec = refraction(rayVec, -planes[0].normal.xyz, eta);
+    	vec3 col = texture(iChannel0,planeVec).xyz;
+
+    	return vec4(col,1.0);
+        
+       
         return texture(iChannel0, planeVec);
     }
-    
+	
     for(int i = 0; i < maxSphere; i++){
         vec3 dp;
-        if(circleExists(ray, sphere[i], position)) {
+        if(circleExists(ray, sphere[i], position)) {//Reflections
             calcCircleZ(sphere[i], position, normal);
-            //return lambertianReflectance(lights[i], ray, normal, position);
-            //return texture(iChannel0, normal);
-            
+
             //reflection
             float percentOfCubeMap = .25;
             vec2 textureVector = reflect(rayVec * .1, normal).xy;
             vec3 colorVec = reflection(rayVec, normal);
-            
-            //refraction
-            //float percentOfCubeMap = 1.0;
-            //float eta = 1.33; //reflection index of water
-            //vec3 colorVec = refraction(rayVec, normal, eta);
-            //vec2 textureVector = refract(rayVec, normal, eta).xy;
-            
+
+
+
             vec4 textureColor;
-            if(mod(float(i), 3.0) == 0.0)
-            	textureColor = texture(iChannel1, textureVector);
-            else if(mod(float(i), 3.0) == 1.0)
+            float total = 4.0;
+            if(mod(float(i), total) == 0.0)
+                textureColor = texture(iChannel1, textureVector);
+            else if(mod(float(i), total) == 1.0)
                 textureColor = texture(iChannel2, textureVector);
-            else if(mod(float(i), 3.0) == 2.0)
-            	textureColor = texture(iChannel3, textureVector);
-                
+            else if(mod(float(i), total) == 2.0)
+               	textureColor = texture(iChannel3, textureVector);
+
             diffuseColor = texture(iChannel0, colorVec);
             return lambertianReflectance(lights[0], ray, normal, position, diffuseColor, specularColor)*percentOfCubeMap
                 + lambertianReflectance(lights[0], ray, normal, position, textureColor, specularColor);
+        }
+        if(circleExists(ray, rSphere[i], position)) { //Refractions
+            calcCircleZ(rSphere[i], position, normal);
+
+            //refraction
+            float percentOfCubeMap = 1.0;
+            //float eta = 1 * ior; //reflection index of water
+            vec3 colorVec = refraction(rayVec, normal, eta);
+            vec2 textureVector = refract(rayVec, normal, eta).xy;
+
+
+            vec4 textureColor;
+            float total = 4.0;
+            if(mod(float(i), total) == 0.0)
+                textureColor = texture(iChannel1, textureVector);
+            else if(mod(float(i), total) == 1.0)
+                textureColor = texture(iChannel2, textureVector);
+            else if(mod(float(i), total) == 2.0)
+                textureColor = texture(iChannel3, textureVector);
+
+            diffuseColor = texture(iChannel0, colorVec);
+            return lambertianReflectance(lights[0], ray, normal, position, diffuseColor, specularColor)*percentOfCubeMap
+            	+ lambertianReflectance(lights[0], ray, normal, position, textureColor, specularColor);
         }
     }
     

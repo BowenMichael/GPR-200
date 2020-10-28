@@ -240,7 +240,7 @@ void initPlane(out sPlane plane, in vec3 p1, in vec3 p2, in vec3 p3){
 	plane.points[0] = asPoint(p1);
     plane.points[1] = asPoint(p2);
     plane.points[2] = asPoint(p3);
-    plane.normal = asVector(cross((p1 - p2), (p1 - p3)));
+    plane.normal = -asVector(cross((p1 - p2), (p1 - p3)));
     
 }
 
@@ -339,7 +339,12 @@ vec4 lambertianReflectance(in pLight lights, in sRay ray, in vec3 normal, in vec
 }
 
 vec3 refraction(in vec3 ray, in vec3 normal, float eta ){
-    
+    float dotOfIndeceAndNormal = dot(normal, ray);
+    float k = 1.0 - squareValue(eta) * (1.0 - squareValue(dotOfIndeceAndNormal));
+    if (k < 0.0) //Critical Angle
+        return vec3(0.0);       // or genDType(0.0)
+    else 
+        return eta * ray - (eta * dotOfIndeceAndNormal + sqrt(k)) * normal;
     return refract(ray, normal, eta); // + (calcDiffuseIntensity(position, normal, lights, normalizedLightVector)* luminance);
 }
 
@@ -353,6 +358,8 @@ void calcCircleZ(in sSphere sphere, inout vec3 position, inout vec3 normal){
         position.xy = sphere.center.xy + vec2(position.x, position.y);
         normal.xy = (position.xy - sphere.center.xy) / sphere.radius;
 }
+
+
 
 /*vec3 mouseVectorTanslation(in vec2 mouse, in sViewport vp, inout vec3 rayDir){
 	//rotation based on mouse position
