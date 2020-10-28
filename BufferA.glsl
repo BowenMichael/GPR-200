@@ -32,10 +32,11 @@ color4 calcColor(in sViewport vp, in sRay ray)
     const int maxSphere = 20;
     sSphere sphere[maxSphere];
     //initSphere(sphere[1], vec3(sin(iTime), 0.0, 0.0), .5);
-    float randMult = rand(vp.ndc);
-    float speed = -iTime;
+    //float randMult = rand(vp.ndc);
+    //float speed = -iTime;
     for(int i = 0; i < maxSphere; i++)
-    	initSphere(sphere[i], vec3((float(i) * .5  - 3.0) + cos(speed),   sin(speed), 0.0), .25);
+    	initSphere(sphere[i], vec3((float(i) * .5  - 3.0),  .75, 0.0), .25);
+    
     
     
     //Light init
@@ -45,6 +46,15 @@ color4 calcColor(in sViewport vp, in sRay ray)
     //light color init
     vec4 specularColor = vec4(1.0) * .5;
     vec4 diffuseColor = vec4(normal * 0.5 + 0.5, 1.0);
+    
+    sPlane planes[5];
+    
+    initPlane(planes[0], vec3(0.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0), vec3(.5, -1.0 , 0.0));
+    
+   	if(vp.ndc.x > 0.0){
+        vec3 planeVec = reflection(rayVec, planes[0].normal.xyz);
+        return texture(iChannel0, planeVec);
+    }
     
     for(int i = 0; i < maxSphere; i++){
         vec3 dp;
@@ -72,9 +82,6 @@ color4 calcColor(in sViewport vp, in sRay ray)
             else if(mod(float(i), 3.0) == 2.0)
             	textureColor = texture(iChannel3, textureVector);
                 
-            
-            
-            
             diffuseColor = texture(iChannel0, colorVec);
             return lambertianReflectance(lights[0], ray, normal, position, diffuseColor, specularColor)*percentOfCubeMap
                 + lambertianReflectance(lights[0], ray, normal, position, textureColor, specularColor);

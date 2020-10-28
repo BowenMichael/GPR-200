@@ -226,6 +226,28 @@ void initSphere (out sSphere sphere, in vec3 center, in float radius)
     sphere.radius = radius;
 }
 
+struct sPlane{
+	vec4 points[3];
+    vec4 normal;
+    vec4 perpendicularNormal;
+};
+
+void initPlane(out sPlane plane, in vec3 p1, in vec3 p2, in vec3 p3){
+    //https://web.ma.utexas.edu/users/m408m/Display12-5-4.shtml
+    //p1 - p2 = v1
+    //p1 - p3 = v2
+    //cross(v1, v2) = normal
+	plane.points[0] = asPoint(p1);
+    plane.points[1] = asPoint(p2);
+    plane.points[2] = asPoint(p3);
+    plane.normal = asVector(cross((p1 - p2), (p1 - p3)));
+    
+}
+
+bool colisionWithPlane(in sPlane plane){
+	//if(plane)
+    return false;
+}
 
 //------------------------------------------------------------
 // RAY INFO
@@ -322,7 +344,7 @@ vec3 refraction(in vec3 ray, in vec3 normal, float eta ){
 }
 
 vec3 reflection(in vec3 ray, in vec3 normal){
-    //return 2.0*normal*dot(normal, ray) - ray;
+    return 2.0*normal*dot(normal, -ray) - -ray;
     return reflect(ray, normal); // + (calcDiffuseIntensity(position, normal, lights, normalizedLightVector)* luminance);
 }
 
